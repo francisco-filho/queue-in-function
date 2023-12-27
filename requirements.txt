@@ -5,3 +5,6 @@
 azure-functions
 azure-identity
 azure-storage-queue
+azure-appconfiguration
+azure-appconfiguration-provider
+

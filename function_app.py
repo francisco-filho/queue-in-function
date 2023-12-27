@@ -4,12 +4,24 @@ import json
 import logging
 from azure.identity import DefaultAzureCredential
 from azure.storage.queue import QueueClient
+from azure.appconfiguration import  AzureAppConfigurationClient, ConfigurationSetting
+from azure.appconfiguration.provider import load, SettingSelector
+import os
 
 app = func.FunctionApp()
 
+def get_config_client():
+    connstr =  os.getenv("APPCONFIG_CONNECTION_STRING")
+    return AzureAppConfigurationClient.from_connection_string(connstr)
+
+def load_config():
+    connstr =  os.getenv("APPCONFIG_CONNECTION_STRING")
+    return load(connection_string=connstr)
+
+
 @app.route(route="send_message", auth_level=func.AuthLevel.ANONYMOUS)
 def send_message(req: func.HttpRequest) -> func.HttpResponse:
-    logging.info('Python HTTP trigger function processed a request.')
+    logging.debug('Python HTTP trigger function processed a request.')
 
     try:
         req_body = req.get_json()
@@ -26,9 +38,15 @@ def send_message(req: func.HttpRequest) -> func.HttpResponse:
 
     queue = QueueClient(account_url=account_url, queue_name=queue_name, credential=credential) 
 
-    receipt = queue.send_message(req_body['message'])
-    receipt = queue.send_message(req_body['message'])
-    receipt = queue.send_message(req_body['message'])
+    msg = req_body.get("message", None)
+    if not msg:
+        config = get_config_client()
+        msg = config.get_configuration_setting(key="FunctionApp:DefaultMessage")
+        #msg = load_config()["FunctionApp:DefaultMessage"]
+
+    receipt = queue.send_message(msg)
+    receipt = queue.send_message(msg)
+    receipt = queue.send_message(msg)
 
     messages = queue.receive_messages(max_messages=10)
 
